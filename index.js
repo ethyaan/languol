@@ -52,7 +52,7 @@ class Languol {
             // destructure the values from message
             const { chat: { id: chatId }, from: { id: userId }, text } = msg;
             // get the command 
-            const command = (text && text.includes(' ')) ? text.split(' ')[1] : false
+            const command = (text && text.includes(' ')) ? text.split(' ')[1] : false;
 
             console.log('_sdfdsdsf =>', this.isAllowed(userId));
 
@@ -82,6 +82,20 @@ class Languol {
     isAllowed = (userId) => {
         console.log('rsss =>', adminId, userId);
         return (adminId && adminId === userId.toString())
+    }
+
+
+    /**
+     * identifies possibilities and shares the prediction scores
+     * @param {*} text 
+     * @param {*} k 
+     */
+    predictLanguage = (text, k = 2) => {
+        new Promise((resolve, reject) => {
+            this.classifier.predict(text, k).then((res) => {
+                res.length > 0 ? resolve(res) : reject('No matches find');
+            }).catch(reject('Error happend!'));
+        })
     }
 
 }
