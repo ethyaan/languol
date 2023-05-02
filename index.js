@@ -47,6 +47,23 @@ class Languol {
 
     }
 
+    checkCommand = () => {
+        this.bot.onText(/\/check/, async (msg) => {
+            // destructure the values from message
+            const { chat: { id: chatId }, from: { id: userId }, text } = msg;
+
+            if (!!text) {
+                try {
+
+                } catch (error) {
+                    console.log('Error occured', error);
+                }
+            } else {
+                this.bot.sendMessage(chatId, 'Wrong input for check command use like `/check YourTextHere`');
+            }
+        });
+    }
+
     statusSwitch = () => {
         this.bot.onText(/\/languol/, (msg) => {
             // destructure the values from message
