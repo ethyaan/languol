@@ -43,6 +43,7 @@ class Languol {
         //     // bot.sendMessage(chatId, 'Received your message');
         // });
 
+        this.checkCommand();
         this.statusSwitch();
 
     }
@@ -51,12 +52,13 @@ class Languol {
         this.bot.onText(/\/check/, async (msg) => {
             // destructure the values from message
             const { chat: { id: chatId }, from: { id: userId }, text } = msg;
-
             if (!!text) {
                 try {
-
+                    const result = await this.predictLanguage(text);
+                    this.bot.sendMessage(chatId, JSON.stringify(result[0]));
                 } catch (error) {
                     console.log('Error occured', error);
+                    this.bot.sendMessage(chatId, error.toString());
                 }
             } else {
                 this.bot.sendMessage(chatId, 'Wrong input for check command use like `/check YourTextHere`');
@@ -108,10 +110,13 @@ class Languol {
      * @param {*} k 
      */
     predictLanguage = (text, k = 2) => {
-        new Promise((resolve, reject) => {
+        return new Promise((resolve, reject) => {
             this.classifier.predict(text, k).then((res) => {
                 res.length > 0 ? resolve(res) : reject('No matches find');
-            }).catch(reject('Error happend!'));
+            }).catch((error) => {
+                console.log('Error in fasttext', error);
+                reject('Error happend!');
+            });
         })
     }
 
