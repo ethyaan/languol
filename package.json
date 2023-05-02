@@ -4,6 +4,7 @@
   "description": "This is a Telegram robot that uses Neural Network to determine the message language and enable restrictions based on the predictions",
   "main": "index.js",
   "scripts": {
+    "start": "node -r dotenv/config index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -19,6 +20,7 @@
     "ai",
     "javascript"
   ],
+  "type": "module",
   "author": "Ehsan Aghaei",
   "license": "MIT",
   "bugs": {
@@ -26,6 +28,7 @@
   },
   "homepage": "https://github.com/ethyaan/languol#readme",
   "dependencies": {
+    "dotenv": "^16.0.3",
     "fasttext": "^1.0.0",
     "node-telegram-bot-api": "^0.61.0"
   }
