@@ -12,42 +12,43 @@ class Languol {
 
     classifier;
     bot;
+    status;
 
     constructor() {
         this.classifier = new fastText.Classifier(modelPath);
         this.bot = new TelegramBot(token, { polling: true });
+        this.status = false; // means off
         this.listen();
     }
 
     listen = () => {
-        // this.bot.on('message', async (msg) => {
-        //     // console.log('Message =>', msg);
 
-        //     // classifier.predict(msg.text, 2)
-        //     //     .then((res) => {
-        //     //         if (res.length > 0) {
-        //     //             console.log('_DEBUG_ =>', res);
-        //     //             // let tag = res[0].label; // __label__knives
-        //     //             // let confidence = res[0].value // 0.8787146210670471
-        //     //             // console.log('classify', tag, confidence, res);
-        //     //         } else {
-        //     //             console.log('No matches');
-        //     //         }
-        //     //     });
+        this.bot.on('text', async (msg) => {
+            if (!this.status) return true;
 
-        //     const chatId = msg.chat.id;
-        //     const userId = msg.from.id;
-        //     const userInfo = await this.bot.getChatMember(chatId, userId);
-        //     console.log('_DEBUG_ =>', userInfo);
-        //     // send a message to the chat acknowledging receipt of their message
-        //     // bot.sendMessage(chatId, 'Received your message');
-        // });
+            // destructure the values from message
+            const { chat: { id: chatId }, from: { id: userId }, text } = msg;
+            console.log('Message===========>', text);
+
+            try {
+                const [{ label, value }] = await this.predictLanguage(text);
+                const name = this.getLanguage(label.slice(-2));
+            } catch (error) {
+                console.log('Error occured', error);
+            }
+
+            // const userInfo = await this.bot.getChatMember(chatId, userId);
+            // console.log('userInfo===========>', userInfo);
+        });
 
         this.checkCommand();
         this.statusSwitch();
 
     }
 
+    /**
+     * check the given input and respond with the result
+     */
     checkCommand = () => {
         this.bot.onText(/\/check/, async (msg) => {
             // destructure the values from message
@@ -68,6 +69,9 @@ class Languol {
         });
     }
 
+    /**
+     * update the languol watch mode on or off
+     */
     statusSwitch = () => {
         this.bot.onText(/\/languol/, (msg) => {
             // destructure the values from message
@@ -75,24 +79,24 @@ class Languol {
             // get the command 
             const command = (text && text.includes(' ')) ? text.split(' ')[1] : false;
 
-            console.log('_sdfdsdsf =>', this.isAllowed(userId));
-
-            // check if command is valid or not
-            console.log('bef =>', command);
-            if (command && ['on', 'off'].indexOf(command) > -1) {
-                console.log('command =>', command);
-            } else {
-                this.bot.sendMessage(chatId, 'Wrong Option, on or off');
+            if (this.isAllowed(userId)) {
+                if (command && ['on', 'off'].indexOf(command) > -1) {
+                    this.status = (command === 'on');
+                    this.bot.sendMessage(chatId, `Languol watching the user inputs: ${command}`);
+                } else {
+                    this.bot.sendMessage(chatId, 'Wrong Option, on or off');
+                }
             }
-            // bot.sendPhoto(msg.chat.id, photo, {
-            //     caption: "I'm a bot!"
-            // });
         });
     }
 
+    /**
+     * get user information
+     * @param {*} chatId 
+     * @param {*} userId 
+     */
     getUserInformation = async (chatId, userId) => {
         const userInfo = await this.bot.getChatMember(chatId, userId);
-        console.log('_DEBUG_ =>', userInfo);
     }
 
     /**
@@ -101,7 +105,6 @@ class Languol {
      * @returns 
      */
     isAllowed = (userId) => {
-        console.log('rsss =>', adminId, userId);
         return (adminId && adminId === userId.toString())
     }
 
