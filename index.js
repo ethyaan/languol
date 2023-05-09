@@ -1,6 +1,23 @@
-import path from 'path';
 import TelegramBot from 'node-telegram-bot-api';
 import fastText from 'fasttext';
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { Low } from 'lowdb'
+import lodash from 'lodash';
+import { JSONFile } from 'lowdb/node'
+
+// db.json file path
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const file = join(__dirname, 'db.json')
+
+class LowWithLodash extends Low {
+    chain = lodash.chain(this).get('data')
+}
+
+// Configure lowdb to write data to JSON file
+const adapter = new JSONFile(file);
+const defaultData = { chats: [] };
+const db = new LowWithLodash(adapter, defaultData);
 
 const token = process.env.TELEGRAM_API_KEY;
 const adminId = process.env.ADMIN_USER_ID;
@@ -13,11 +30,20 @@ class Languol {
     classifier;
     bot;
     status;
+    chats;
 
     constructor() {
         this.classifier = new fastText.Classifier(modelPath);
         this.bot = new TelegramBot(token, { polling: true });
         this.status = false; // means off
+
+        (async () => {
+            try {
+                await db.read();
+                this.chats = db.chain.get('chats');
+            } catch (e) { console.log('JSON db error', e); }
+        })()
+
         this.listen();
     }
 
@@ -29,6 +55,9 @@ class Languol {
             // destructure the values from message
             const { chat: { id: chatId }, from: { id: userId }, text } = msg;
             console.log('Message===========>', text);
+
+            const setting = this.chats.find({ id: chatId }).value();
+            console.log('setting =>', setting);
 
             try {
                 const [{ label, value }] = await this.predictLanguage(text);
