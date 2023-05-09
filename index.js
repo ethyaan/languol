@@ -52,10 +52,12 @@ class Languol {
         this.bot.onText(/\/check/, async (msg) => {
             // destructure the values from message
             const { chat: { id: chatId }, from: { id: userId }, text } = msg;
+
             if (!!text) {
                 try {
-                    const result = await this.predictLanguage(text);
-                    this.bot.sendMessage(chatId, JSON.stringify(result[0]));
+                    const [{ label, value }] = await this.predictLanguage(text);
+                    const name = this.getLanguage(label.slice(-2));
+                    this.bot.sendMessage(chatId, `predicted language: ${name} , accuracy: ${value.toFixed(8)}`);
                 } catch (error) {
                     console.log('Error occured', error);
                     this.bot.sendMessage(chatId, error.toString());
@@ -109,7 +111,7 @@ class Languol {
      * @param {*} text 
      * @param {*} k 
      */
-    predictLanguage = (text, k = 2) => {
+    predictLanguage = (text, k = 4) => {
         return new Promise((resolve, reject) => {
             this.classifier.predict(text, k).then((res) => {
                 res.length > 0 ? resolve(res) : reject('No matches find');
@@ -118,6 +120,15 @@ class Languol {
                 reject('Error happend!');
             });
         })
+    }
+
+    /**
+     * get Language Name
+     * @param {*} code 
+     * @returns language name as string
+     */
+    getLanguage = (code) => {
+        return new Intl.DisplayNames(['en'], { type: 'language' }).of(code);
     }
 
 }
