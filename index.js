@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url'
 import { Low } from 'lowdb'
 import lodash from 'lodash';
 import { JSONFile } from 'lowdb/node'
-console.log('_DEBUG_ =>',);
 
 // db.json file path
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -46,21 +45,20 @@ class Languol {
             // destructure the values from message
             const { chat: { id: chatId }, from: { id: userId }, text } = msg;
             // check if robot is enabled for this chat by admin
-            if (this.isActive(chatId)) return true;
-
-            this.isAdminAllowed(chatId, userId);
-
-            console.log('Message===========>', text);
+            if (!this.isActive(chatId)) return true;
 
             try {
-                const [{ label, value }] = await this.predictLanguage(text);
-                const name = this.getLanguage(label.slice(-2));
+                const [{ label }] = await this.predictLanguage(text);
+                const shortName = label.slice(-2);
+                if (shortName !== 'en') {
+                    const { message_id } = await this.bot.sendMessage(chatId, `Only English messages are allowed.`);
+                    setTimeout(() => {
+                        this.bot.deleteMessage(chatId, message_id);
+                    }, 5000);
+                }
             } catch (error) {
                 console.log('Error occured', error);
             }
-
-            // const userInfo = await this.bot.getChatMember(chatId, userId);
-            // console.log('userInfo===========>', userInfo);
         });
 
         this.checkCommand();
@@ -95,21 +93,40 @@ class Languol {
      * update the languol watch mode on or off
      */
     statusSwitch = () => {
-        this.bot.onText(/\/languol/, async (msg) => {
-            // destructure the values from message
-            const { chat: { id: chatId }, from: { id: userId }, text } = msg;
-            // get the command 
-            const command = (text && text.includes(' ')) ? text.split(' ')[1] : false;
+        this.bot.onText(/\/status/, async (msg) => {
+            try {
+                // destructure the values from message
+                const { chat: { id: chatId }, from: { id: userId }, text } = msg;
+                // get the command 
+                const command = (text && text.includes(' ')) ? text.split(' ')[1] : false;
 
-            // if (this.isAllowed(userId)) { // an other type of check only for bot owner, hard coded as config
-            if (this.isAdminAllowed(chatId, userId)) {
-                if (command && ['on', 'off'].indexOf(command) > -1) {
-                    this.status = (command === 'on');
-                    this.updateStatus(chatId, command);
-                    this.bot.sendMessage(chatId, `Languol watching the user inputs: ${command}`);
-                } else {
-                    this.bot.sendMessage(chatId, 'Wrong Option, on or off');
+                // if (this.isAllowed(userId)) { // an other type of check only for bot owner, hard coded as config
+                if (await this.isAdminAllowed(chatId, userId)) {
+                    if (command && ['on', 'off'].indexOf(command) > -1) {
+                        this.status = (command === 'on');
+                        this.updateStatus(chatId, command);
+                        this.bot.sendMessage(chatId, `Languol watching the user inputs: ${command}`);
+                    } else {
+                        this.bot.sendMessage(chatId, 'Wrong Option, on or off');
+                    }
                 }
+            } catch (error) {
+                console.log('Error in check status =>', error);
+            }
+        });
+    }
+
+    /**
+     * check robot status
+     */
+    checkStatus = () => {
+        this.bot.onText(/\/languol/, async (msg) => {
+            try {
+                // destructure the values from message
+                const { chat: { id: chatId } } = msg;
+                this.bot.sendMessage(chatId, `Bot status is: ${this.isActive(chatId) ? 'Active' : 'deActive'}`);
+            } catch (error) {
+                console.log('Error in switch status =>', error);
             }
         });
     }
