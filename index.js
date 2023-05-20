@@ -196,7 +196,7 @@ class Languol {
             Object.assign(chats, { [chatId]: currenChat });
             await db.write();
         } catch (error) {
-            console.error('Error update bot status =>', error);
+            console.log('Error update bot status =>', error);
         }
     }
 
