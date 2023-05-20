@@ -63,7 +63,7 @@ class Languol {
 
         this.checkCommand();
         this.statusSwitch();
-
+        this.checkStatus();
     }
 
     /**
@@ -93,7 +93,7 @@ class Languol {
      * update the languol watch mode on or off
      */
     statusSwitch = () => {
-        this.bot.onText(/\/status/, async (msg) => {
+        this.bot.onText(/\/languol/, async (msg) => {
             try {
                 // destructure the values from message
                 const { chat: { id: chatId }, from: { id: userId }, text } = msg;
@@ -120,7 +120,7 @@ class Languol {
      * check robot status
      */
     checkStatus = () => {
-        this.bot.onText(/\/languol/, async (msg) => {
+        this.bot.onText(/\/status/, async (msg) => {
             try {
                 // destructure the values from message
                 const { chat: { id: chatId } } = msg;
