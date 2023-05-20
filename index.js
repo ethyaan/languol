@@ -16,8 +16,9 @@ class LowWithLodash extends Low {
 
 // Configure lowdb to write data to JSON file
 const adapter = new JSONFile(file);
-const defaultData = { chats: [] };
-const db = new LowWithLodash(adapter, defaultData);
+const db = new LowWithLodash(adapter, { chats: {} });
+await db.read();
+const { data: { chats } } = db;
 
 const token = process.env.TELEGRAM_API_KEY;
 const adminId = process.env.ADMIN_USER_ID;
@@ -30,34 +31,23 @@ class Languol {
     classifier;
     bot;
     status;
-    chats;
 
     constructor() {
         this.classifier = new fastText.Classifier(modelPath);
         this.bot = new TelegramBot(token, { polling: true });
-        this.status = false; // means off
-
-        (async () => {
-            try {
-                await db.read();
-                this.chats = db.chain.get('chats');
-            } catch (e) { console.log('JSON db error', e); }
-        })()
-
+        this.status = true; // means off
         this.listen();
     }
 
     listen = () => {
 
         this.bot.on('text', async (msg) => {
-            if (!this.status) return true;
-
             // destructure the values from message
             const { chat: { id: chatId }, from: { id: userId }, text } = msg;
-            console.log('Message===========>', text);
+            // check if robot is enabled for this chat by admin
+            if (this.isActive(chatId)) return true;
 
-            const setting = this.chats.find({ id: chatId }).value();
-            console.log('setting =>', setting);
+            console.log('Message===========>', text);
 
             try {
                 const [{ label, value }] = await this.predictLanguage(text);
@@ -102,7 +92,7 @@ class Languol {
      * update the languol watch mode on or off
      */
     statusSwitch = () => {
-        this.bot.onText(/\/languol/, (msg) => {
+        this.bot.onText(/\/languol/, async (msg) => {
             // destructure the values from message
             const { chat: { id: chatId }, from: { id: userId }, text } = msg;
             // get the command 
@@ -111,6 +101,7 @@ class Languol {
             if (this.isAllowed(userId)) {
                 if (command && ['on', 'off'].indexOf(command) > -1) {
                     this.status = (command === 'on');
+                    this.updateStatus(chatId, command);
                     this.bot.sendMessage(chatId, `Languol watching the user inputs: ${command}`);
                 } else {
                     this.bot.sendMessage(chatId, 'Wrong Option, on or off');
@@ -163,6 +154,31 @@ class Languol {
         return new Intl.DisplayNames(['en'], { type: 'language' }).of(code);
     }
 
+    /**
+     * update the bot status in db for a specific chat
+     * @param {*} chatId 
+     * @param {*} status 
+     */
+    updateStatus = async (chatId, status) => {
+        try {
+            const currenChat = chats[`${chatId}`] || {};
+            // we do two level of assignment to keep the possible existing values
+            Object.assign(currenChat, { status });
+            Object.assign(chats, { [chatId]: currenChat });
+            db.write();
+        } catch (error) {
+            console.error('Error update bot status =>', error);
+        }
+    }
+
+    /**
+     * check if robot is active for this chat
+     * @param {*} chatId 
+     * @returns 
+     */
+    isActive = (chatId) => {
+        return (chats[`${chatId}`]?.status === 'on');
+    }
 }
 
 export default new Languol();
