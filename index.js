@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { Low } from 'lowdb'
 import lodash from 'lodash';
 import { JSONFile } from 'lowdb/node'
+console.log('_DEBUG_ =>',);
 
 // db.json file path
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -46,6 +47,8 @@ class Languol {
             const { chat: { id: chatId }, from: { id: userId }, text } = msg;
             // check if robot is enabled for this chat by admin
             if (this.isActive(chatId)) return true;
+
+            this.isAdminAllowed(chatId, userId);
 
             console.log('Message===========>', text);
 
@@ -98,7 +101,8 @@ class Languol {
             // get the command 
             const command = (text && text.includes(' ')) ? text.split(' ')[1] : false;
 
-            if (this.isAllowed(userId)) {
+            // if (this.isAllowed(userId)) { // an other type of check only for bot owner, hard coded as config
+            if (this.isAdminAllowed(chatId, userId)) {
                 if (command && ['on', 'off'].indexOf(command) > -1) {
                     this.status = (command === 'on');
                     this.updateStatus(chatId, command);
@@ -111,21 +115,29 @@ class Languol {
     }
 
     /**
-     * get user information
-     * @param {*} chatId 
-     * @param {*} userId 
-     */
-    getUserInformation = async (chatId, userId) => {
-        const userInfo = await this.bot.getChatMember(chatId, userId);
-    }
-
-    /**
      * check if current command sender is the bot owner or not.
-     * @param {number} userId 
+     * @param {number} userId
      * @returns 
      */
     isAllowed = (userId) => {
         return (adminId && adminId === userId.toString())
+    }
+
+    /**
+     * check if user is admin or owner
+     * @param {*} chatId 
+     * @param {*} userId 
+     * @returns 
+     */
+    isAdminAllowed = async (chatId, userId) => {
+        try {
+            // get user information
+            const { status } = await this.bot.getChatMember(chatId, userId);
+            // check if user is admin or owner
+            return (['creator', 'administrator'].indexOf(status) > -1);
+        } catch (error) {
+            console.log('Error check user permission =>', error);
+        }
     }
 
 
@@ -165,7 +177,7 @@ class Languol {
             // we do two level of assignment to keep the possible existing values
             Object.assign(currenChat, { status });
             Object.assign(chats, { [chatId]: currenChat });
-            db.write();
+            await db.write();
         } catch (error) {
             console.error('Error update bot status =>', error);
         }
