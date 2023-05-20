@@ -74,7 +74,7 @@ class Languol {
     checkCommand = () => {
         this.bot.onText(/\/check/, async (msg) => {
             // destructure the values from message
-            const { chat: { id: chatId }, from: { id: userId }, text } = msg;
+            const { chat: { id: chatId }, text } = msg;
 
             if (!!text) {
                 try {
